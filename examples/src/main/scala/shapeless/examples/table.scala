@@ -1,6 +1,8 @@
 package shapeless.examples
 
 
+import java.util.Date
+
 import shapeless.PolyDefns._
 import shapeless._
 import shapeless.ops.hlist.At
@@ -15,10 +17,10 @@ object table {
   class On[R<:HList] {
 
     type SO[A] = SelectNOrder[R, A]
+    type Sorter = Seq[R] => Seq[R]
 
-    object transformer extends (SO ~>> String) {
-      def apply[O](so: SO[O]): String =
-        s"so.extractor=${so.extractor} with so.ord=${so.ord}"
+    object transformer extends (SO ~>> Sorter) {
+      def apply[O](so: SO[O]): (Seq[R]=>Seq[R]) = (hlists: Seq[R]) => hlists.sortBy(so.extractor(_))(so.ord)
     }
 
     case class State(pointer: Int, pageSize: Int, sortedRows: Seq[R])
@@ -70,6 +72,33 @@ object table {
     }
   }
 
+  // This table view has methods to give one a view of the table
+  // if the user clicks on a column header the view sorts the table
+  // according to the ordering for that column of the hlist
+  // This version of the table is not safe. The user could click on
+  // a non existent column, or the sorter function may not match the
+  // type of the hlist.
+  case class TableView[TH<:HList,TR<:HList](table: Table[TH,TR]) {
+    var sortCol : Int = 0
+    var sorters: List[Seq[TR]=>Seq[TR]] = List()
+
+    //can click on a column that does not exist!!!
+    // but one can imagine that in an a UI the table view sets the clickable
+    // fields itself.
+    def clickOnHeader(col: Int){
+      sortCol = col
+    }
+    // set the sorter functions. These funcs should be set by the table
+    //itself upon creation.
+    def setSorter(funcs: List[Seq[TR]=>Seq[TR]]) {
+      sorters = funcs
+    }
+    def view = {
+       val f = sorters(sortCol) // can throw index out of bounds exception!
+       f(table.rows)
+    }
+  }
+
   /**
    * Code taken from https://gist.github.com/milessabin/6814566
    */
@@ -98,18 +127,28 @@ object table {
 
   }
 
-  type LT = String::Boolean::HNil
+  type LT = String::Boolean::Date::HNil
   val simple = new On[LT]
-  val l = "Hello"::true::HNil
-//  val t = "num"::"String"::"Bool"::HNil
+  val time = System.currentTimeMillis()
+  val l = Seq("Hello"::false::new Date(time)::HNil,
+              "Bye"::true::new Date(time+10000)::HNil,
+              "Apple"::false::new Date(time-200000)::HNil)
+  val t = "String"::"num"::HNil
 
-//  val table = Table(t,Seq(l))
+  val table = Table(t,l)
+  val tableView = TableView(table)
   //val lo = myHListOps(l)
 //  val x = lo.extractors
   val xx = Extractor.apply[LT]
   val x = xx()
 
-  val result = x map simple.transformer
-  println("result="+result)
+  val sorters = x map simple.transformer
+
+  tableView.setSorter(sorters.toList)
+  println(tableView.view)
+  tableView.clickOnHeader(1)
+  println(tableView.view)
+  tableView.clickOnHeader(2)
+  println(tableView.view)
 
 }
