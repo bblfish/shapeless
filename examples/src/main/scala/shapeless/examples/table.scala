@@ -113,8 +113,8 @@ object table {
     object TableShape {
       implicit def productTableShape[TH, TR, LH, LR]
       (implicit
-       //       genH: Generic.Aux[TH, LH],
-       //       genR: Generic.Aux[TR, LR],
+              genH: Generic.Aux[TH, LH],
+              genR: Generic.Aux[TR, LR],
        hlistShape: TableShape[LH, LR]): TableShape[TH, TR] = new TableShape[TH, TR] {}
 
       implicit def hsingleTableShape[RH]: TableShape[String :: HNil, RH :: HNil] =
@@ -133,7 +133,7 @@ object table {
   val l = Seq("Hello"::false::new Date(time)::HNil,
               "Bye"::true::new Date(time+10000)::HNil,
               "Apple"::false::new Date(time-200000)::HNil)
-  val t = "String"::"num"::HNil
+  val t = "String"::"bool"::"Date"::HNil
 
   val table = Table(t,l)
   val tableView = TableView(table)
