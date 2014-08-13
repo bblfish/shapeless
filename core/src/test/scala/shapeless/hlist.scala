@@ -169,6 +169,9 @@ class HListTests {
     val l2 = l1 map singleton
     assertTypedEquals[SISSSISI](Set(1) :: Set("foo") :: Set(2) :: Set(3) :: HNil, l2)
 
+    val l2a = l2 map choose
+    assertTypedEquals[OIOSOIOI](Option(1) :: Option("foo") :: Option(2) :: Option(3) :: HNil, l2a)
+
     val l3 = l1 map option
     assertTypedEquals[OIOSOIOI](Option(1) :: Option("foo") :: Option(2) :: Option(3) :: HNil, l3)
 
