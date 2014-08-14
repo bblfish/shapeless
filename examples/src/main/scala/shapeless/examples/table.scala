@@ -78,9 +78,15 @@ object table {
   // This version of the table is not safe. The user could click on
   // a non existent column, or the sorter function may not match the
   // type of the hlist.
-  case class TableView[TH<:HList,TR<:HList](table: Table[TH,TR]) {
+  case class TableView[TH<:HList,TR<:HList](table: Table[TH,TR], on: On[TR])
+                                           (implicit extractor: Extractor[_0, TR,TR]) {
     var sortCol : Int = 0
-    var sorters: List[Seq[TR]=>Seq[TR]] = List()
+    var sorters: List[Seq[TR]=>Seq[TR]] = {
+      val xx = Extractor.apply[TR]
+      val x = xx()
+      val sorters = x map on.transformer
+      sorters.toList
+    }
 
     //can click on a column that does not exist!!!
     // but one can imagine that in an a UI the table view sets the clickable
@@ -88,11 +94,7 @@ object table {
     def clickOnHeader(col: Int){
       sortCol = col
     }
-    // set the sorter functions. These funcs should be set by the table
-    //itself upon creation.
-    def setSorter(funcs: List[Seq[TR]=>Seq[TR]]) {
-      sorters = funcs
-    }
+
     def view = {
        val f = sorters(sortCol) // can throw index out of bounds exception!
        f(table.rows)
@@ -136,15 +138,10 @@ object table {
   val t = "String"::"bool"::"Date"::HNil
 
   val table = Table(t,l)
-  val tableView = TableView(table)
+  val tableView = TableView(table,new On)
   //val lo = myHListOps(l)
 //  val x = lo.extractors
-  val xx = Extractor.apply[LT]
-  val x = xx()
 
-  val sorters = x map simple.transformer
-
-  tableView.setSorter(sorters.toList)
   println(tableView.view)
   tableView.clickOnHeader(1)
   println(tableView.view)
