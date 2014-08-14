@@ -5,7 +5,7 @@ import java.util.Date
 
 import shapeless.PolyDefns._
 import shapeless._
-import shapeless.ops.hlist.At
+import shapeless.ops.hlist.{Mapper, At}
 
 import scala.math.Ordering
 
@@ -78,8 +78,9 @@ object table {
   // This version of the table is not safe. The user could click on
   // a non existent column, or the sorter function may not match the
   // type of the hlist.
-  case class TableView[TH<:HList,TR<:HList](table: Table[TH,TR], on: On[TR])
-                                           (implicit extractor: Extractor[_0, TR,TR]) {
+  case class TableView[TH<:HList,TR<:HList, Out](table: Table[TH,TR], on: On[TR])
+                                           (implicit extractor: Extractor.Aux[_0, TR,TR,Out],
+                                           mappr: Mapper[on.transformer.type,Out]) {
     var sortCol : Int = 0
     var sorters: List[Seq[TR]=>Seq[TR]] = {
       val xx = Extractor.apply[TR]
