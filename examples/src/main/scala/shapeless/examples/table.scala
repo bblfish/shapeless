@@ -5,7 +5,7 @@ import java.util.Date
 
 import shapeless.PolyDefns._
 import shapeless._
-import shapeless.ops.hlist.{Mapper, At, Length}
+import shapeless.ops.hlist.{At, Length, Mapper}
 import shapeless.ops.nat.ToInt
 
 import scala.math.Ordering
@@ -76,7 +76,7 @@ object table {
   // according to the ordering for that column of the hlist
   case class TableView[TH<:HList,TR<:HList, Out<:HList,Size<:Nat](table: Table[TH,TR], on: On[TR])
                                            (implicit extractor: Extractor.Aux[_0, TR,TR,Out],
-                                           mappr: Mapper[({type l[a] = SelectNOrder[Out,a]})#l~>>Function1[Seq[TR],Seq[TR]],Out],
+                                           mappr: Mapper[({type l[a] = SelectNOrder[TR,a]})#l~>>Function1[Seq[TR],Seq[TR]],Out],
                                            len: Length.Aux[TR,Size],
                                            toInt: ToInt[Size]) {
     val length: Int = toInt()
