@@ -5,7 +5,8 @@ import java.util.Date
 
 import shapeless.PolyDefns._
 import shapeless._
-import shapeless.ops.hlist.{Mapper, At}
+import shapeless.ops.hlist.{Mapper, At, Length}
+import shapeless.ops.nat.ToInt
 
 import scala.math.Ordering
 
@@ -22,8 +23,6 @@ object table {
     object transformer extends (SO ~>> Sorter) {
       def apply[O](so: SO[O]): (Seq[R]=>Seq[R]) = (hlists: Seq[R]) => hlists.sortBy(so.extractor(_))(so.ord)
     }
-
-    case class State(pointer: Int, pageSize: Int, sortedRows: Seq[R])
 
   }
 
@@ -75,25 +74,33 @@ object table {
   // This table view has methods to give one a view of the table
   // if the user clicks on a column header the view sorts the table
   // according to the ordering for that column of the hlist
-  // This version of the table is not safe. The user could click on
-  // a non existent column, or the sorter function may not match the
-  // type of the hlist.
-  case class TableView[TH<:HList,TR<:HList, Out](table: Table[TH,TR], on: On[TR])
+  case class TableView[TH<:HList,TR<:HList, Out<:HList,Size<:Nat](table: Table[TH,TR], on: On[TR])
                                            (implicit extractor: Extractor.Aux[_0, TR,TR,Out],
-                                           mappr: Mapper[on.transformer.type,Out]) {
+                                           mappr: Mapper[({type l[a] = SelectNOrder[Out,a]})#l~>>Function1[Seq[TR],Seq[TR]],Out],
+                                           len: Length.Aux[TR,Size],
+                                           toInt: ToInt[Size]) {
+    val length: Int = toInt()
+
+
+
     var sortCol : Int = 0
     var sorters: List[Seq[TR]=>Seq[TR]] = {
+//      def id(s: Seq[TR])=s
+//      List(id,id,id)
       val xx = Extractor.apply[TR]
       val x = xx()
       val sorters = x map on.transformer
       sorters.toList
     }
 
-    //can click on a column that does not exist!!!
-    // but one can imagine that in an a UI the table view sets the clickable
-    // fields itself.
+    /*
+    naive implementation of a click on header event.
+    Safety is produced by modulus the length of the table
+    In a fully developed UI the table view would sets the clickable
+    fields itself, making it impossible to create out of bound click events
+    */
     def clickOnHeader(col: Int){
-      sortCol = col
+      sortCol = col%length
     }
 
     def view = {
@@ -131,7 +138,6 @@ object table {
   }
 
   type LT = String::Boolean::Date::HNil
-  val simple = new On[LT]
   val time = System.currentTimeMillis()
   val l = Seq("Hello"::false::new Date(time)::HNil,
               "Bye"::true::new Date(time+10000)::HNil,
